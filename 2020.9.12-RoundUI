@@ -1,0 +1,147 @@
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class RoundUIManager : MonoBehaviour
+{
+    [ContextMenuItem("Init","Init")]
+    public List<GameObject> roundUI = new List<GameObject>();
+    private List<RectTransform> rectUI = new List<RectTransform>();
+    //private List<SpriteRenderer> spriteUI = new List<SpriteRenderer>(); 
+
+    [Header("Individual")]
+    public bool isClone;    //是否统一化各面板
+    public Vector2 sizeV2;      //面板尺寸
+
+    private float[] angles;     //各面板的当前角度
+    private float angleUnit;    //单个面板角度
+
+    [Header("Total")]
+    public Vector3 roundDeformationV3;    //圆周形变量
+    public float rotateSpeed;   //旋转速度
+    public float dragSpeed;     //拖拽速度
+
+    private float nowAngle;     //目前整体角度
+    private float targetAngle;  //目标整体角度
+    private bool isDrag;        //是否被拖动
+    private bool isRotate;      //是否在旋转
+
+
+
+    void Start()
+    {
+        //初始化
+        angles = new float[roundUI.Count];
+        nowAngle = targetAngle =  0;
+        angleUnit = 2 * Mathf.PI / angles.Length;
+        for (int i = 0; i < roundUI.Count; i++)
+        {
+            //获取各个面板的组件
+            rectUI.Add(roundUI[i].GetComponent<RectTransform>());
+            //spriteUI.Add(roundUI[i].GetComponent<SpriteRenderer>());
+            //对各个面板角度赋值
+            angles[i] =  i * angleUnit;
+            //设定初始位置
+            rectUI[i].anchoredPosition3D = new Vector3(Mathf.Sin(angles[i]) * roundDeformationV3.x, Mathf.Cos(angles[i]) * roundDeformationV3.y, Mathf.Cos(angles[i]) * roundDeformationV3.z);
+            
+            //统一化
+            if(isClone)
+            {
+                //spriteUI[i].size = sizeV2;
+            }
+        }
+    }
+
+    private void OnEnable()
+    {
+
+    }
+
+    private void OnDisable()
+    {
+        
+    }
+
+    void Update()
+    {
+        //UI交互
+        Interaction();
+    }
+
+    private void Interaction()
+    {
+        //鼠标拖动
+        if (Input.GetKey(KeyCode.Mouse0))
+        {
+            isDrag = true;
+            targetAngle += Input.GetAxis("Mouse X") * Time.deltaTime * dragSpeed;
+        }
+        else if (Input.GetKeyUp(KeyCode.Mouse0))
+        {
+            //吸附
+            isDrag = false;
+            targetAngle = Mathf.RoundToInt(targetAngle / angleUnit) * angleUnit;
+        }
+
+        //键盘切换面板
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            //顺时针
+            targetAngle += angleUnit;
+        }
+        if (Input.GetKeyDown(KeyCode.D))
+        {
+            //逆时针
+            targetAngle -= angleUnit;
+        }
+
+        //旋转
+        if (targetAngle != nowAngle)    //当目标角度与当前角度不同时
+        {
+            //开始旋转
+            isRotate = true;
+            if (Mathf.Abs(targetAngle - nowAngle) < 0.001 && !isDrag)   //旋转到位且不在拖拽
+            {
+                //停止旋转
+                isRotate = false;
+                nowAngle = targetAngle;
+            }
+            else if (isRotate)   //旋转未到位
+            {
+                if (targetAngle > nowAngle)  //顺时针
+                {
+                    //调整当前角度
+                    nowAngle += rotateSpeed * Time.deltaTime;
+                    //调整各个面板
+                    for (int i = 0; i < roundUI.Count; i++)
+                    {
+                        angles[i] += rotateSpeed * Time.deltaTime;
+                        rectUI[i].anchoredPosition3D = new Vector3(Mathf.Sin(angles[i]) * roundDeformationV3.x, Mathf.Cos(angles[i]) * roundDeformationV3.y, Mathf.Cos(angles[i]) * roundDeformationV3.z);
+                    }
+                }
+                else    //逆时针
+                {
+                    //调整当前角度
+                    nowAngle -= rotateSpeed * Time.deltaTime;
+                    //调整各个面板
+                    for (int i = 0; i < roundUI.Count; i++)
+                    {
+                        angles[i] -= rotateSpeed * Time.deltaTime;
+                        rectUI[i].anchoredPosition3D = new Vector3(Mathf.Sin(angles[i]) * roundDeformationV3.x, Mathf.Cos(angles[i]) * roundDeformationV3.y, Mathf.Cos(angles[i]) * roundDeformationV3.z);
+                    }
+                }
+                //调整渲染层级
+                float min = rectUI[0].anchoredPosition3D.z;
+                for (int i = 0; i < roundUI.Count; i++)
+                {
+                    if(rectUI[i].anchoredPosition3D.z <= min)
+                    {
+                        min = rectUI[i].anchoredPosition3D.z;
+                        roundUI[i].transform.SetAsLastSibling();
+                    }
+                }
+            }
+        }
+    }
+}

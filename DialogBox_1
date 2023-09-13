@@ -1,0 +1,70 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class DialogBox_1: MonoBehaviour
+{
+    public List<string> texts = new List<string>();     //语句
+    public RectTransform boxRect;   //对话框背景
+    public Text text;       //文本控件
+    public float typeSpeed;     //文字打印间隔        
+    public float sizeSpeed;     //对话框背景变形速度
+    public Vector2Int nowIndex;     //目前打印位置,x为第几个语句索引,y为第几个文字索引
+
+    private float targetSize;       //目标对话框尺寸
+
+    void Start()
+    {
+        //初始化
+        nowIndex = Vector2Int.zero;
+        targetSize = 0;
+    }
+
+    void FixedUpdate()
+    {
+        //对话框大小调节
+        if ((boxRect.sizeDelta.y - targetSize) < -1)
+        {
+            boxRect.sizeDelta = new Vector2(0, boxRect.sizeDelta.y + sizeSpeed * Time.fixedDeltaTime);
+        }
+        else if ((boxRect.sizeDelta.y - targetSize) > 1)
+        {
+            boxRect.sizeDelta = new Vector2(0, boxRect.sizeDelta.y - sizeSpeed * Time.fixedDeltaTime);
+        }
+        else
+        {
+            boxRect.sizeDelta = new Vector2(0, targetSize);
+        }
+    }
+
+    public void TypeText()
+    {
+        //打印协程
+        StartCoroutine("IEType");
+    }
+
+    IEnumerator IEType()
+    {
+        //逐字打印
+        for (nowIndex.y = 0; nowIndex.y < texts[nowIndex.x].Length; nowIndex.y++)
+        {
+            text.text += texts[nowIndex.x][nowIndex.y];
+            targetSize = text.fontSize * text.lineSpacing * (Mathf.RoundToInt(text.text.Length/12) + 4);
+            yield return new WaitForSeconds(typeSpeed); 
+        }
+        //到下一语句
+        nowIndex.x++;
+        nowIndex.y = 0;
+    }
+
+    public void OnTextChange(List<string> _texts)
+    {
+        //赋值
+        texts = _texts;
+        //初始化
+        text.text = "";
+        targetSize = 0;
+        boxRect.sizeDelta = new Vector2(0,0);
+    }
+}
